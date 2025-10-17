@@ -195,7 +195,7 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
+      {/* <section className="max-w-7xl mx-auto px-6 py-20">
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-3xl p-12 text-center">
           <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
             Ready to Transform Your PDFs?
@@ -215,7 +215,7 @@ export default function Home() {
             </Button>
           </Link>
         </div>
-      </section>
+      </section> */}
 
       {/* Footer */}
       <footer className="border-t border-gray-800 bg-gray-900/50 backdrop-blur-sm">

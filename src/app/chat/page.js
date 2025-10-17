@@ -1,6 +1,15 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { Upload, Plus, Menu, FileText, Sparkles, X } from "lucide-react";
+import {
+  Upload,
+  Plus,
+  Menu,
+  FileText,
+  Sparkles,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import Button from "@/components/ui/Button";
 import FileUpload from "@/components/ui/FileUpload";
 import MessageBubble from "@/components/chat/MessageBubble";
@@ -241,22 +250,28 @@ export default function ChatPage() {
       <div
         className={`${
           sidebarOpen ? "w-80" : "w-0"
-        } transition-all duration-300 bg-gray-900/50 backdrop-blur-sm border-r border-gray-800 flex flex-col overflow-hidden`}
+        } transition-all duration-300 bg-gray-900/50 backdrop-blur-sm border-r border-gray-800 flex flex-col overflow-hidden relative`}
       >
+        {/* Collapse Button - Positioned on the right edge */}
+        {sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="absolute top-1/2 -right-3 transform -translate-y-1/2 z-10 w-6 h-12 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-r-lg flex items-center justify-center transition-colors group"
+            title="Collapse sidebar"
+          >
+            <ChevronLeft
+              size={16}
+              className="text-gray-400 group-hover:text-white"
+            />
+          </button>
+        )}
+
         <div className="p-4 border-b border-gray-800">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <Sparkles size={20} className="text-blue-500" />
               Askly AI
             </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(false)}
-              className="lg:hidden"
-            >
-              <X size={18} />
-            </Button>
           </div>
           <Button
             variant="primary"
@@ -283,19 +298,24 @@ export default function ChatPage() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col relative">
+        {/* Expand Button - Show when sidebar is collapsed */}
+        {!sidebarOpen && (
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="absolute top-1/2 left-0 transform -translate-y-1/2 z-10 w-6 h-12 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-r-lg flex items-center justify-center transition-colors group"
+            title="Expand sidebar"
+          >
+            <ChevronRight
+              size={16}
+              className="text-gray-400 group-hover:text-white"
+            />
+          </button>
+        )}
+
         {/* Header */}
         <div className="h-16 border-b border-gray-800 bg-gray-900/50 backdrop-blur-sm flex items-center justify-between px-6">
           <div className="flex items-center gap-3">
-            {!sidebarOpen && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarOpen(true)}
-              >
-                <Menu size={20} />
-              </Button>
-            )}
             {selectedDocument ? (
               <>
                 <FileText size={20} className="text-blue-500" />
