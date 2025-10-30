@@ -42,6 +42,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -177,7 +178,7 @@ export default function ChatPage() {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full bg-background">
+      <div className="flex h-screen w-full bg-background p-2">
         {/* Sidebar */}
         <Sidebar>
           <SidebarHeader className="border-b px-4 py-3">
@@ -328,7 +329,7 @@ export default function ChatPage() {
         </Sidebar>
 
         {/* Main Chat Area */}
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col border rounded-3xl">
           {/* Header */}
           <header className="flex h-14 items-center justify-between border-b px-4">
             <div className="flex items-center gap-2">
@@ -348,6 +349,7 @@ export default function ChatPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               <Button variant="outline" size="sm">
                 <Upload className="mr-2 h-4 w-4" />
                 Upload
@@ -360,7 +362,7 @@ export default function ChatPage() {
           </header>
 
           {/* Messages Area */}
-          <ScrollArea className="flex-1 p-4">
+          <ScrollArea className="flex-1 p-4 ">
             <div className="mx-auto max-w-3xl space-y-4">
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center space-y-4 py-20 text-center">

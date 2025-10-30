@@ -11,10 +11,9 @@ export default function SignInPage() {
               card: "shadow-xl",
             },
           }}
-          routing="path"
-          path="/sign-in"
           signUpUrl="/sign-up"
-          forceRedirectUrl="/chat"
+          afterSignInUrl="/chat"
+          redirectUrl="/chat"
         />
       </div>
     </div>
