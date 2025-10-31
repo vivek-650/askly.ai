@@ -155,97 +155,25 @@ export default function ChatPage() {
     }
   };
 
-  const handleNewConversation = () => {
-    const newConv = {
-      id: Date.now().toString(),
-      title: "New Conversation",
-      messages: 0,
-      date: "Now",
-    };
-    setConversations([newConv, ...conversations]);
-    setActiveConversation(newConv.id);
-    setMessages([]);
-    setSelectedDocument(null);
-  };
-
-  const handleDeleteConversation = (id) => {
-    setConversations(conversations.filter((conv) => conv.id !== id));
-    if (activeConversation === id) {
-      setActiveConversation(conversations[0]?.id);
-      setMessages([]);
-    }
-  };
-
   return (
     <SidebarProvider>
       <div className="flex h-screen w-full bg-background p-2">
         {/* Sidebar */}
         <Sidebar>
-          <SidebarHeader className="border-b px-4 py-3">
+          <SidebarHeader className="px-4 py-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageCircle className="h-6 w-6 text-primary" />
                 <h2 className="text-lg font-semibold">Askly AI</h2>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleNewConversation}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
             </div>
           </SidebarHeader>
 
           <SidebarContent>
-            {/* Conversations */}
-            <SidebarGroup>
-              <SidebarGroupLabel>Conversations</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <ScrollArea className="h-[200px]">
-                  <SidebarMenu>
-                    {conversations.map((conv) => (
-                      <SidebarMenuItem key={conv.id}>
-                        <div className="group relative flex w-full items-center">
-                          <SidebarMenuButton
-                            onClick={() => setActiveConversation(conv.id)}
-                            isActive={activeConversation === conv.id}
-                            className="flex-1"
-                          >
-                            <MessageCircle className="h-4 w-4" />
-                            <div className="flex-1 overflow-hidden">
-                              <p className="truncate text-sm">{conv.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {conv.date}
-                              </p>
-                            </div>
-                          </SidebarMenuButton>
-                          <button
-                            className="absolute right-2 h-6 w-6 rounded-md opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteConversation(conv.id);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </ScrollArea>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <Separator className="my-2" />
-
             {/* Documents */}
             <SidebarGroup>
               <SidebarGroupLabel className="flex items-center justify-between">
                 <span>Documents</span>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <Upload className="h-3 w-3" />
-                </Button>
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <ScrollArea className="h-[250px]">
@@ -276,13 +204,13 @@ export default function ChatPage() {
             </SidebarGroup>
           </SidebarContent>
 
-          <SidebarFooter className="border-t p-4">
+          <SidebarFooter className="py-4">
             {isSignedIn ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="w-full justify-start gap-2"
+                    className="w-full justify-start gap-2 p-2"
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user?.imageUrl} />
@@ -302,7 +230,7 @@ export default function ChatPage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
+                  {/* <DropdownMenuSeparator /> */}
                   <DropdownMenuItem asChild>
                     <Link href="/pricing">
                       <Crown className="mr-2 h-4 w-4" />
@@ -313,7 +241,7 @@ export default function ChatPage() {
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  {/* <DropdownMenuSeparator /> */}
                   <DropdownMenuItem onClick={() => signOut()}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
@@ -329,7 +257,7 @@ export default function ChatPage() {
         </Sidebar>
 
         {/* Main Chat Area */}
-        <div className="flex flex-1 flex-col border rounded-3xl">
+        <div className="flex flex-1 flex-col border rounded-3xl dark:bg-black/60">
           {/* Header */}
           <header className="flex h-14 items-center justify-between border-b px-4">
             <div className="flex items-center gap-2">
