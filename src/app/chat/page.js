@@ -43,6 +43,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { WebsiteURLModal } from "@/components/modals/WebsiteURLModal";
 import { YouTubeURLModal } from "@/components/modals/YouTubeURLModal";
@@ -63,6 +64,7 @@ export default function ChatPage() {
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [documents, setDocuments] = useState([]);
+  const [uploadingDocs, setUploadingDocs] = useState([]);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [conversations, setConversations] = useState([
     { id: "1", title: "New Conversation", messages: 0, date: "Today" },
@@ -84,6 +86,114 @@ export default function ChatPage() {
     }
   };
 
+  // Handle file upload
+  const handleFileUpload = async (file) => {
+    const uploadId = Date.now().toString();
+
+    // Add to uploading state immediately
+    setUploadingDocs((prev) => [
+      ...prev,
+      {
+        id: uploadId,
+        name: file.name,
+        type: "pdf",
+        status: "uploading",
+        progress: 0,
+      },
+    ]);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload/file", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const result = await response.json();
+
+      // Remove from uploading and add to documents
+      setUploadingDocs((prev) => prev.filter((doc) => doc.id !== uploadId));
+      setDocuments((prev) => [
+        ...prev,
+        {
+          id: result.data.collectionName,
+          name: file.name,
+          type: "pdf",
+          date: "Just now",
+          collectionName: result.data.collectionName,
+          chunks: result.data.chunks,
+        },
+      ]);
+    } catch (error) {
+      console.error("Upload error:", error);
+      // Update status to error
+      setUploadingDocs((prev) =>
+        prev.map((doc) =>
+          doc.id === uploadId ? { ...doc, status: "error" } : doc
+        )
+      );
+    }
+  };
+
+  // Handle website URL submission
+  const handleWebsiteSubmit = async (urls) => {
+    for (const url of urls) {
+      const uploadId = Date.now().toString() + Math.random();
+
+      setUploadingDocs((prev) => [
+        ...prev,
+        {
+          id: uploadId,
+          name: url,
+          type: "website",
+          status: "uploading",
+          progress: 0,
+        },
+      ]);
+
+      try {
+        const urlName = new URL(url).hostname;
+        const response = await fetch("/api/upload/website", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, urlName }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Website indexing failed");
+        }
+
+        const result = await response.json();
+
+        setUploadingDocs((prev) => prev.filter((doc) => doc.id !== uploadId));
+        setDocuments((prev) => [
+          ...prev,
+          {
+            id: result.data.collectionName,
+            name: urlName,
+            type: "website",
+            date: "Just now",
+            collectionName: result.data.collectionName,
+            chunks: result.data.chunks,
+          },
+        ]);
+      } catch (error) {
+        console.error("Website indexing error:", error);
+        setUploadingDocs((prev) =>
+          prev.map((doc) =>
+            doc.id === uploadId ? { ...doc, status: "error" } : doc
+          )
+        );
+      }
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -92,30 +202,11 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Load user documents
+  // Load user documents - remove mock data
   useEffect(() => {
     if (isSignedIn) {
-      // Fetch documents from API
-      setDocuments([
-        {
-          id: "1",
-          name: "Project Documentation.pdf",
-          type: "pdf",
-          date: "2 hours ago",
-        },
-        {
-          id: "2",
-          name: "Research Paper.pdf",
-          type: "pdf",
-          date: "Yesterday",
-        },
-        {
-          id: "3",
-          name: "example.com",
-          type: "website",
-          date: "2 days ago",
-        },
-      ]);
+      // Fetch real documents from API if needed
+      // For now, documents will be populated by uploads
     }
   }, [isSignedIn]);
 
@@ -192,10 +283,51 @@ export default function ChatPage() {
             <SidebarGroup>
               <SidebarGroupLabel className="flex items-center justify-between">
                 <span>Documents</span>
+                <Badge variant="secondary" className="ml-auto">
+                  {documents.length + uploadingDocs.length}
+                </Badge>
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <ScrollArea className="h-[250px]">
                   <SidebarMenu>
+                    {/* Uploading documents with progress */}
+                    {uploadingDocs.map((doc) => (
+                      <SidebarMenuItem key={doc.id}>
+                        <div className="flex flex-col gap-2 px-2 py-2 rounded-md bg-muted/50">
+                          <div className="flex items-center gap-2">
+                            {doc.type === "pdf" ? (
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <Globe className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <div className="flex-1 overflow-hidden">
+                              <p className="truncate text-sm">{doc.name}</p>
+                            </div>
+                          </div>
+                          {doc.status === "uploading" && (
+                            <div className="space-y-1">
+                              <Progress
+                                value={doc.progress || 50}
+                                className="h-1"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                                <span className="text-xs text-muted-foreground">
+                                  Indexing...
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {doc.status === "error" && (
+                            <span className="text-xs text-destructive">
+                              Upload failed
+                            </span>
+                          )}
+                        </div>
+                      </SidebarMenuItem>
+                    ))}
+
+                    {/* Successfully uploaded documents */}
                     {documents.map((doc) => (
                       <SidebarMenuItem key={doc.id}>
                         <SidebarMenuButton
@@ -452,10 +584,12 @@ export default function ChatPage() {
         open={isUploadModalOpen}
         onOpenChange={setIsUploadModalOpen}
         onSelectOption={handleUploadOptionSelect}
+        onFileUpload={handleFileUpload}
       />
       <WebsiteURLModal
         open={isWebsiteModalOpen}
         onOpenChange={setIsWebsiteModalOpen}
+        onSubmit={handleWebsiteSubmit}
       />
       <YouTubeURLModal
         open={isYouTubeModalOpen}

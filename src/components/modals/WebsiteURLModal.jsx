@@ -3,16 +3,34 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Loader2 } from "lucide-react"
 
-export function WebsiteURLModal({ open, onOpenChange }) {
+export function WebsiteURLModal({ open, onOpenChange, onSubmit }) {
   const [urls, setUrls] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleInsert = () => {
-    // Handle URL insertion logic
-    console.log("Inserting URLs:", urls)
-    onOpenChange(false)
-    setUrls("")
+  const handleInsert = async () => {
+    if (!urls.trim()) return
+    
+    setIsLoading(true)
+    try {
+      // Split URLs by newline and filter empty lines
+      const urlList = urls
+        .split("\n")
+        .map(url => url.trim())
+        .filter(url => url.length > 0)
+      
+      if (onSubmit) {
+        await onSubmit(urlList)
+      }
+      
+      onOpenChange(false)
+      setUrls("")
+    } catch (error) {
+      console.error("Error submitting URLs:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -55,15 +73,23 @@ export function WebsiteURLModal({ open, onOpenChange }) {
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
+              disabled={isLoading}
             >
               Cancel
             </Button>
             <Button
               onClick={handleInsert}
-              disabled={!urls.trim()}
+              disabled={!urls.trim() || isLoading}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              Insert
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Indexing...
+                </>
+              ) : (
+                "Insert"
+              )}
             </Button>
           </div>
         </div>

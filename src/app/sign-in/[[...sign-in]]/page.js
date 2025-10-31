@@ -12,8 +12,7 @@ export default function SignInPage() {
             },
           }}
           signUpUrl="/sign-up"
-          afterSignInUrl="/chat"
-          redirectUrl="/chat"
+          forceRedirectUrl="/chat"
         />
       </div>
     </div>
