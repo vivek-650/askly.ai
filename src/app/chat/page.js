@@ -122,11 +122,11 @@ export default function ChatPage() {
       setDocuments((prev) => [
         ...prev,
         {
-          id: result.data.collectionName,
+          id: result.data.documentId,
           name: file.name,
           type: "pdf",
           date: "Just now",
-          collectionName: result.data.collectionName,
+          documentId: result.data.documentId,
           chunks: result.data.chunks,
         },
       ]);
@@ -175,11 +175,11 @@ export default function ChatPage() {
         setDocuments((prev) => [
           ...prev,
           {
-            id: result.data.collectionName,
+            id: result.data.documentId,
             name: urlName,
             type: "website",
             date: "Just now",
-            collectionName: result.data.collectionName,
+            documentId: result.data.documentId,
             chunks: result.data.chunks,
           },
         ]);
@@ -194,6 +194,32 @@ export default function ChatPage() {
     }
   };
 
+  // Handle document deletion
+  const handleDeleteDocument = async (documentId) => {
+    try {
+      const response = await fetch(`/api/documents/${documentId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete document");
+      }
+
+      // Remove from local state
+      setDocuments((prev) =>
+        prev.filter((doc) => doc.documentId !== documentId)
+      );
+
+      // Clear selection if deleted document was selected
+      if (selectedDocument?.documentId === documentId) {
+        setSelectedDocument(null);
+      }
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      alert("Failed to delete document");
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -202,13 +228,36 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Load user documents - remove mock data
+  // Load user documents on mount
   useEffect(() => {
     if (isSignedIn) {
-      // Fetch real documents from API if needed
-      // For now, documents will be populated by uploads
+      fetchUserDocuments();
     }
   }, [isSignedIn]);
+
+  // Fetch user's documents from API
+  const fetchUserDocuments = async () => {
+    try {
+      const response = await fetch("/api/documents");
+      if (!response.ok) throw new Error("Failed to fetch documents");
+
+      const data = await response.json();
+
+      // Transform API response to match component state structure
+      const formattedDocs = data.documents.map((doc) => ({
+        id: doc.documentId,
+        name: doc.name,
+        type: doc.type,
+        date: new Date(doc.uploadedAt).toLocaleDateString(),
+        documentId: doc.documentId,
+        chunks: doc.chunks,
+      }));
+
+      setDocuments(formattedDocs);
+    } catch (error) {
+      console.error("Error fetching documents:", error);
+    }
+  };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -230,21 +279,22 @@ export default function ChatPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          query: inputMessage,
-          documentId: selectedDocument?.id,
-          collectionName:
-            selectedDocument?.type === "website"
-              ? "website_content"
-              : "pdf_documents",
+          message: inputMessage,
+          documentId: selectedDocument?.documentId,
+          conversationHistory: messages.slice(-6), // Last 3 exchanges
         }),
       });
+
+      if (!response.ok) {
+        throw new Error("Chat request failed");
+      }
 
       const data = await response.json();
 
       const assistantMessage = {
         id: Date.now() + 1,
         role: "assistant",
-        content: data.answer || "I'm sorry, I couldn't process that request.",
+        content: data.response || "I'm sorry, I couldn't process that request.",
         timestamp: new Date(),
         sources: data.sources,
       };
@@ -330,22 +380,33 @@ export default function ChatPage() {
                     {/* Successfully uploaded documents */}
                     {documents.map((doc) => (
                       <SidebarMenuItem key={doc.id}>
-                        <SidebarMenuButton
-                          onClick={() => setSelectedDocument(doc)}
-                          isActive={selectedDocument?.id === doc.id}
-                        >
-                          {doc.type === "pdf" ? (
-                            <FileText className="h-4 w-4" />
-                          ) : (
-                            <Globe className="h-4 w-4" />
-                          )}
-                          <div className="flex-1 overflow-hidden">
-                            <p className="truncate text-sm">{doc.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {doc.date}
-                            </p>
-                          </div>
-                        </SidebarMenuButton>
+                        <div className="flex items-center gap-1 w-full">
+                          <SidebarMenuButton
+                            onClick={() => setSelectedDocument(doc)}
+                            isActive={selectedDocument?.id === doc.id}
+                            className="flex-1"
+                          >
+                            {doc.type === "pdf" ? (
+                              <FileText className="h-4 w-4" />
+                            ) : (
+                              <Globe className="h-4 w-4" />
+                            )}
+                            <div className="flex-1 overflow-hidden">
+                              <p className="truncate text-sm">{doc.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {doc.date}
+                              </p>
+                            </div>
+                          </SidebarMenuButton>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 shrink-0"
+                            onClick={() => handleDeleteDocument(doc.documentId)}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                          </Button>
+                        </div>
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>

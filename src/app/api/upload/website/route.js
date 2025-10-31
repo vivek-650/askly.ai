@@ -24,6 +24,7 @@ export async function POST(request) {
         success: true,
         message: "Website indexed successfully",
         data: {
+          documentId: result.documentId,
           url,
           collectionName: result.collectionName,
           chunks: result.chunks,

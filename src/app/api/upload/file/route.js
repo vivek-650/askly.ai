@@ -62,6 +62,7 @@ export async function POST(request) {
       success: true,
       message: "File uploaded and indexed successfully",
       data: {
+        documentId: result.documentId,
         fileName: file.name,
         fileSize: file.size,
         collectionName: result.collectionName,

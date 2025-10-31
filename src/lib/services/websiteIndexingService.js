@@ -4,11 +4,14 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { QdrantVectorStore } from "@langchain/qdrant";
 
+// Single shared collection name for all users
+const SHARED_COLLECTION_NAME = "askly-documents";
+
 /**
- * Fetch and index website content
+ * Fetch and index website content with user isolation
  * @param {string} url - Website URL
  * @param {string} urlName - Identifier for the URL
- * @param {string} userId - User ID for collection isolation
+ * @param {string} userId - User ID for document isolation
  */
 export async function indexWebsiteContent(url, urlName, userId) {
   if (!url || !urlName) {
@@ -43,12 +46,19 @@ export async function indexWebsiteContent(url, urlName, userId) {
 
     const chunks = await splitter.createDocuments([rawText]);
 
-    // Add metadata
+    // Generate unique document ID
+    const documentId = `${userId}-${Date.now()}-${urlName.replace(
+      /[^a-zA-Z0-9]/g,
+      "-"
+    )}`;
+
+    // Add metadata with user isolation
     chunks.forEach((chunk, index) => {
       chunk.metadata = {
+        userId, // For filtering by user
+        documentId, // Unique document identifier
         url,
         urlName,
-        userId,
         chunkIndex: index,
         source: "website",
         uploadedAt: new Date().toISOString(),
@@ -61,21 +71,17 @@ export async function indexWebsiteContent(url, urlName, userId) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    // 5. Store in Qdrant
-    const collectionName = `user-${userId}-${urlName.replace(
-      /[^a-zA-Z0-9]/g,
-      "-"
-    )}`;
-
+    // 5. Store in shared Qdrant collection
     await QdrantVectorStore.fromDocuments(chunks, embeddings, {
       url: process.env.QDRANT_URL || "http://localhost:6333",
-      collectionName,
+      collectionName: SHARED_COLLECTION_NAME,
     });
 
     return {
       success: true,
       message: "Website indexed successfully",
-      collectionName,
+      documentId,
+      collectionName: SHARED_COLLECTION_NAME,
       chunks: chunks.length,
       url,
     };
