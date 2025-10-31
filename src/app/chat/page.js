@@ -19,6 +19,7 @@ import {
   Settings,
   LogOut,
   Crown,
+  Youtube,
 } from "lucide-react";
 
 import {
@@ -43,6 +44,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { WebsiteURLModal } from "@/components/modals/WebsiteURLModal";
+import { YouTubeURLModal } from "@/components/modals/YouTubeURLModal";
+import { UploadSourcesModal } from "@/components/modals/UploadSourcesModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +69,20 @@ export default function ChatPage() {
   ]);
   const [activeConversation, setActiveConversation] = useState("1");
   const messagesEndRef = useRef(null);
+
+  // Modal states
+  const [isWebsiteModalOpen, setIsWebsiteModalOpen] = useState(false);
+  const [isYouTubeModalOpen, setIsYouTubeModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+  const handleUploadOptionSelect = (optionId) => {
+    setIsUploadModalOpen(false);
+    if (optionId === "website") {
+      setIsWebsiteModalOpen(true);
+    } else if (optionId === "youtube") {
+      setIsYouTubeModalOpen(true);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -278,13 +296,29 @@ export default function ChatPage() {
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsUploadModalOpen(true)}
+              >
                 <Upload className="mr-2 h-4 w-4" />
                 Upload
               </Button>
-              <Button variant="outline" size="sm">
-                <LinkIcon className="mr-2 h-4 w-4" />
-                Add Website
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsWebsiteModalOpen(true)}
+              >
+                <Globe className="mr-2 h-4 w-4" />
+                Website
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsYouTubeModalOpen(true)}
+              >
+                <Youtube className="mr-2 h-4 w-4" />
+                YouTube
               </Button>
             </div>
           </header>
@@ -412,6 +446,21 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <UploadSourcesModal
+        open={isUploadModalOpen}
+        onOpenChange={setIsUploadModalOpen}
+        onSelectOption={handleUploadOptionSelect}
+      />
+      <WebsiteURLModal
+        open={isWebsiteModalOpen}
+        onOpenChange={setIsWebsiteModalOpen}
+      />
+      <YouTubeURLModal
+        open={isYouTubeModalOpen}
+        onOpenChange={setIsYouTubeModalOpen}
+      />
     </SidebarProvider>
   );
 }
