@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
@@ -7,7 +7,9 @@ import { indexPDFDocument } from "@/lib/services/indexingService";
 
 export async function POST(request) {
   try {
-    const { userId } = await auth();
+    const user = await currentUser();
+    const userId = user?.id;
+    const start = Date.now();
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,12 +19,14 @@ export async function POST(request) {
     const file = formData.get("file");
 
     if (!file) {
+      console.warn("[upload:file] No file provided");
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
     // Validate file type
     const allowedTypes = ["application/pdf"];
     if (!allowedTypes.includes(file.type)) {
+      console.warn("[upload:file] Invalid type", { type: file.type });
       return NextResponse.json(
         { error: "Only PDF files are supported" },
         { status: 400 }
@@ -32,6 +36,7 @@ export async function POST(request) {
     // Validate file size (50MB max)
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
+      console.warn("[upload:file] File too large", { size: file.size });
       return NextResponse.json(
         { error: "File size exceeds 50MB limit" },
         { status: 400 }
@@ -50,13 +55,28 @@ export async function POST(request) {
     const uniqueFileName = `${timestamp}-${sanitizedFileName}`;
     const filePath = join(uploadsDir, uniqueFileName);
 
+    console.log("[upload:file] begin", {
+      userId,
+      email: user?.emailAddresses?.[0]?.emailAddress,
+      fileName: file.name,
+      mime: file.type,
+      size: file.size,
+    });
+
     // Write file to disk
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     await writeFile(filePath, buffer);
+    console.log("[upload:file] saved", { filePath });
 
     // Index the PDF
     const result = await indexPDFDocument(filePath, file.name, userId);
+    console.log("[upload:file] indexed", {
+      documentId: result.documentId,
+      chunks: result.chunks,
+      collection: result.collectionName,
+      ms: Date.now() - start,
+    });
 
     return NextResponse.json({
       success: true,
@@ -71,11 +91,11 @@ export async function POST(request) {
       },
     });
   } catch (error) {
-    console.error("File upload error:", error);
+    console.error("[upload:file] error:", error?.message || error);
     return NextResponse.json(
       {
         error: "Failed to upload and index file",
-        details: error.message,
+        details: error?.message || "",
       },
       { status: 500 }
     );

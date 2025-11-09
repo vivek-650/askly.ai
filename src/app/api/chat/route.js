@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { OpenAI } from "openai";
 import { queryUserDocuments } from "@/lib/services/queryService";
@@ -12,19 +12,30 @@ const openai = new OpenAI({
  * Processes chat messages with RAG (Retrieval Augmented Generation)
  */
 export async function POST(request) {
+  const startTime = Date.now();
   try {
-    // Get authenticated user
-    const authResult = await auth();
-    const userId = authResult?.userId;
+    // Get authenticated user using currentUser() (works with Next.js 16)
+    const user = await currentUser();
+    const userId = user?.id;
 
     if (!userId) {
+      console.log("[api:chat] unauthorized - no userId");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
     const { message, documentId, conversationHistory = [] } = body;
 
+    console.log("[api:chat] begin", {
+      userId,
+      email: user?.emailAddresses?.[0]?.emailAddress,
+      messageLength: message?.length,
+      documentId,
+      hasHistory: conversationHistory.length > 0,
+    });
+
     if (!message) {
+      console.log("[api:chat] validation failed - no message");
       return NextResponse.json(
         { error: "Message is required" },
         { status: 400 }
@@ -32,12 +43,14 @@ export async function POST(request) {
     }
 
     // Query relevant documents from user's collection
-    const relevantDocs = await queryUserDocuments(
+    const queryResult = await queryUserDocuments(
       message,
       userId,
       documentId, // Optional: filter by specific document
       4 // Number of relevant chunks to retrieve
     );
+
+    const relevantDocs = queryResult.results || [];
 
     // Build context from retrieved documents
     const context = relevantDocs
@@ -86,6 +99,14 @@ Instructions:
     const aiResponse =
       completion.choices[0]?.message?.content || "No response generated";
 
+    const elapsed = Date.now() - startTime;
+    console.log("[api:chat] response generated", {
+      userId,
+      elapsed: `${elapsed}ms`,
+      responseLength: aiResponse.length,
+      sourcesCount: relevantDocs.length,
+    });
+
     return NextResponse.json({
       success: true,
       response: aiResponse,
@@ -98,11 +119,11 @@ Instructions:
       documentCount: relevantDocs.length,
     });
   } catch (error) {
-    console.error("Error in chat API:", error);
+    console.error("[api:chat] error:", error?.message || error);
     return NextResponse.json(
       {
         error: "Failed to process chat message",
-        details: error.message,
+        details: error?.message || "",
       },
       { status: 500 }
     );

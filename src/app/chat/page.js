@@ -22,6 +22,15 @@ import {
   Youtube,
 } from "lucide-react";
 
+// Import React Query hooks
+import {
+  useDocuments,
+  useUploadPDF,
+  useUploadWebsite,
+  useDeleteDocument,
+  useChatMessage,
+} from "@/hooks/useDocuments";
+
 import {
   Sidebar,
   SidebarContent,
@@ -62,15 +71,18 @@ export default function ChatPage() {
   const { signOut } = useClerk();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [documents, setDocuments] = useState([]);
   const [uploadingDocs, setUploadingDocs] = useState([]);
   const [selectedDocument, setSelectedDocument] = useState(null);
-  const [conversations, setConversations] = useState([
-    { id: "1", title: "New Conversation", messages: 0, date: "Today" },
-  ]);
-  const [activeConversation, setActiveConversation] = useState("1");
   const messagesEndRef = useRef(null);
+
+  // React Query hooks
+  const { data: documents = [], isLoading: documentsLoading } = useDocuments({
+    enabled: true,
+  });
+  const uploadPDFMutation = useUploadPDF();
+  const uploadWebsiteMutation = useUploadWebsite();
+  const deleteDocumentMutation = useDeleteDocument();
+  const chatMutation = useChatMessage();
 
   // Modal states
   const [isWebsiteModalOpen, setIsWebsiteModalOpen] = useState(false);
@@ -86,11 +98,11 @@ export default function ChatPage() {
     }
   };
 
-  // Handle file upload
+  // Handle file upload with React Query mutation
   const handleFileUpload = async (file) => {
     const uploadId = Date.now().toString();
 
-    // Add to uploading state immediately
+    // Add to uploading state for UI feedback
     setUploadingDocs((prev) => [
       ...prev,
       {
@@ -103,33 +115,9 @@ export default function ChatPage() {
     ]);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("/api/upload/file", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Upload failed");
-      }
-
-      const result = await response.json();
-
-      // Remove from uploading and add to documents
+      await uploadPDFMutation.mutateAsync(file);
+      // Remove from uploading state on success
       setUploadingDocs((prev) => prev.filter((doc) => doc.id !== uploadId));
-      setDocuments((prev) => [
-        ...prev,
-        {
-          id: result.data.documentId,
-          name: file.name,
-          type: "pdf",
-          date: "Just now",
-          documentId: result.data.documentId,
-          chunks: result.data.chunks,
-        },
-      ]);
     } catch (error) {
       console.error("Upload error:", error);
       // Update status to error
@@ -141,10 +129,15 @@ export default function ChatPage() {
     }
   };
 
-  // Handle website URL submission
+  // Handle website URL submission with React Query
   const handleWebsiteSubmit = async (urls) => {
+    if (!isSignedIn) {
+      console.warn("Website submit blocked: user not signed in");
+      return;
+    }
     for (const url of urls) {
       const uploadId = Date.now().toString() + Math.random();
+      const urlName = new URL(url).hostname;
 
       setUploadingDocs((prev) => [
         ...prev,
@@ -158,31 +151,8 @@ export default function ChatPage() {
       ]);
 
       try {
-        const urlName = new URL(url).hostname;
-        const response = await fetch("/api/upload/website", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, urlName }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Website indexing failed");
-        }
-
-        const result = await response.json();
-
+        await uploadWebsiteMutation.mutateAsync({ url, urlName });
         setUploadingDocs((prev) => prev.filter((doc) => doc.id !== uploadId));
-        setDocuments((prev) => [
-          ...prev,
-          {
-            id: result.data.documentId,
-            name: urlName,
-            type: "website",
-            date: "Just now",
-            documentId: result.data.documentId,
-            chunks: result.data.chunks,
-          },
-        ]);
       } catch (error) {
         console.error("Website indexing error:", error);
         setUploadingDocs((prev) =>
@@ -194,21 +164,10 @@ export default function ChatPage() {
     }
   };
 
-  // Handle document deletion
+  // Handle document deletion with React Query
   const handleDeleteDocument = async (documentId) => {
     try {
-      const response = await fetch(`/api/documents/${documentId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete document");
-      }
-
-      // Remove from local state
-      setDocuments((prev) =>
-        prev.filter((doc) => doc.documentId !== documentId)
-      );
+      await deleteDocumentMutation.mutateAsync(documentId);
 
       // Clear selection if deleted document was selected
       if (selectedDocument?.documentId === documentId) {
@@ -228,40 +187,13 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  // Load user documents on mount
-  useEffect(() => {
-    if (isSignedIn) {
-      fetchUserDocuments();
-    }
-  }, [isSignedIn]);
-
-  // Fetch user's documents from API
-  const fetchUserDocuments = async () => {
-    try {
-      const response = await fetch("/api/documents");
-      if (!response.ok) throw new Error("Failed to fetch documents");
-
-      const data = await response.json();
-
-      // Transform API response to match component state structure
-      const formattedDocs = data.documents.map((doc) => ({
-        id: doc.documentId,
-        name: doc.name,
-        type: doc.type,
-        date: new Date(doc.uploadedAt).toLocaleDateString(),
-        documentId: doc.documentId,
-        chunks: doc.chunks,
-      }));
-
-      setDocuments(formattedDocs);
-    } catch (error) {
-      console.error("Error fetching documents:", error);
-    }
-  };
-
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputMessage.trim() || isLoading) return;
+    if (!isSignedIn) {
+      console.warn("Chat send blocked: user not signed in");
+      return;
+    }
+    if (!inputMessage.trim() || chatMutation.isPending) return;
 
     const userMessage = {
       id: Date.now(),
@@ -272,24 +204,13 @@ export default function ChatPage() {
 
     setMessages([...messages, userMessage]);
     setInputMessage("");
-    setIsLoading(true);
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: inputMessage,
-          documentId: selectedDocument?.documentId,
-          conversationHistory: messages.slice(-6), // Last 3 exchanges
-        }),
+      const data = await chatMutation.mutateAsync({
+        message: inputMessage,
+        documentId: selectedDocument?.documentId,
+        conversationHistory: messages.slice(-6), // Last 3 exchanges
       });
-
-      if (!response.ok) {
-        throw new Error("Chat request failed");
-      }
-
-      const data = await response.json();
 
       const assistantMessage = {
         id: Date.now() + 1,
@@ -309,8 +230,6 @@ export default function ChatPage() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -587,7 +506,7 @@ export default function ChatPage() {
                   </div>
                 ))
               )}
-              {isLoading && (
+              {chatMutation.isPending && (
                 <div className="flex gap-3">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground">
@@ -618,14 +537,14 @@ export default function ChatPage() {
                       ? `Ask about ${selectedDocument.name}...`
                       : "Ask a question..."
                   }
-                  disabled={isLoading}
+                  disabled={chatMutation.isPending}
                   className="flex-1"
                 />
                 <Button
                   type="submit"
-                  disabled={isLoading || !inputMessage.trim()}
+                  disabled={chatMutation.isPending || !inputMessage.trim()}
                 >
-                  {isLoading ? (
+                  {chatMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Send className="h-4 w-4" />

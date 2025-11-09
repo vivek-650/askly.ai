@@ -33,11 +33,11 @@ export async function queryUserDocuments(
       }
     );
 
-    // Build filter for user isolation
+    // Build filter for user isolation (metadata is nested under `metadata.*` in Qdrant payload)
     const filter = {
       must: [
         {
-          key: "userId",
+          key: "metadata.userId",
           match: { value: userId },
         },
       ],
@@ -46,7 +46,7 @@ export async function queryUserDocuments(
     // Add document filter if specific document requested
     if (documentId) {
       filter.must.push({
-        key: "documentId",
+        key: "metadata.documentId",
         match: { value: documentId },
       });
     }
@@ -75,12 +75,27 @@ export async function getUserDocuments(userId) {
       url: process.env.QDRANT_URL || "http://localhost:6333",
     });
 
+    // Check if collection exists first
+    const collections = await client.getCollections();
+    const collectionExists = collections.collections.some(
+      (col) => col.name === SHARED_COLLECTION_NAME
+    );
+
+    if (!collectionExists) {
+      // Collection doesn't exist yet, return empty array
+      return {
+        success: true,
+        documents: [],
+        count: 0,
+      };
+    }
+
     // Scroll through all points with user filter
     const scrollResult = await client.scroll(SHARED_COLLECTION_NAME, {
       filter: {
         must: [
           {
-            key: "userId",
+            key: "metadata.userId",
             match: { value: userId },
           },
         ],
@@ -92,28 +107,50 @@ export async function getUserDocuments(userId) {
 
     // Extract unique documents
     const documentsMap = new Map();
+    const chunkCounts = new Map();
 
     scrollResult.points.forEach((point) => {
-      const metadata = point.payload;
-      if (metadata.documentId && !documentsMap.has(metadata.documentId)) {
-        documentsMap.set(metadata.documentId, {
-          id: metadata.documentId,
-          name: metadata.fileName || metadata.urlName || metadata.textName,
-          type: metadata.source,
-          uploadedAt: metadata.uploadedAt,
-          url: metadata.url || null,
-        });
+      const metadata = point.payload?.metadata || {};
+      if (metadata.documentId) {
+        // Count chunks per document
+        chunkCounts.set(
+          metadata.documentId,
+          (chunkCounts.get(metadata.documentId) || 0) + 1
+        );
+
+        // Store document info (only once)
+        if (!documentsMap.has(metadata.documentId)) {
+          documentsMap.set(metadata.documentId, {
+            documentId: metadata.documentId,
+            name: metadata.fileName || metadata.urlName || metadata.textName,
+            type: metadata.source,
+            uploadedAt: metadata.uploadedAt,
+            url: metadata.url || null,
+          });
+        }
       }
     });
 
+    // Add chunk counts to documents
+    const documents = Array.from(documentsMap.values()).map((doc) => ({
+      ...doc,
+      chunks: chunkCounts.get(doc.documentId) || 0,
+    }));
+
     return {
       success: true,
-      documents: Array.from(documentsMap.values()),
-      count: documentsMap.size,
+      documents,
+      count: documents.length,
     };
   } catch (error) {
     console.error("Get documents error:", error);
-    throw new Error(`Failed to get user documents: ${error.message}`);
+    // Return empty array on error instead of throwing
+    return {
+      success: false,
+      documents: [],
+      count: 0,
+      error: error.message,
+    };
   }
 }
 
@@ -133,11 +170,11 @@ export async function deleteUserDocument(userId, documentId) {
       filter: {
         must: [
           {
-            key: "userId",
+            key: "metadata.userId",
             match: { value: userId },
           },
           {
-            key: "documentId",
+            key: "metadata.documentId",
             match: { value: documentId },
           },
         ],
@@ -180,12 +217,12 @@ export async function initializeSharedCollection() {
 
       // Create payload index for faster filtering
       await client.createPayloadIndex(SHARED_COLLECTION_NAME, {
-        field_name: "userId",
+        field_name: "metadata.userId",
         field_schema: "keyword",
       });
 
       await client.createPayloadIndex(SHARED_COLLECTION_NAME, {
-        field_name: "documentId",
+        field_name: "metadata.documentId",
         field_schema: "keyword",
       });
 

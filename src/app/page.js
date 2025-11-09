@@ -60,7 +60,7 @@ export default function Home() {
           <div className="flex flex-wrap gap-4">
             <SignedOut>
               <Button size="lg" asChild>
-                <Link href="/sign-up">Get Started <ArrowRight className="inline-block bg-purple-600/30 border rounded-full" /></Link>
+                <Link href="/sign-in">Get Started <ArrowRight className="inline-block bg-purple-600/30 border rounded-full" /></Link>
               </Button>
             </SignedOut>
             <SignedIn>

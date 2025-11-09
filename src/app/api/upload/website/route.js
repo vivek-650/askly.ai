@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import {
   indexMultipleWebsites,
   indexWebsiteContent,
@@ -7,7 +7,15 @@ import {
 
 export async function POST(request) {
   try {
-    const { userId } = await auth();
+    const user = await currentUser();
+    const userId = user?.id;
+    const start = Date.now();
+    const cookieHeader = request.headers.get("cookie");
+    console.log("[upload:website] begin", {
+      userId,
+      email: user?.emailAddresses?.[0]?.emailAddress,
+      cookiePresent: !!cookieHeader,
+    });
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +27,12 @@ export async function POST(request) {
     // Handle single URL
     if (url && urlName) {
       const result = await indexWebsiteContent(url, urlName, userId);
-
+      console.log("[upload:website] single indexed", {
+        documentId: result.documentId,
+        chunks: result.chunks,
+        collection: result.collectionName,
+        ms: Date.now() - start,
+      });
       return NextResponse.json({
         success: true,
         message: "Website indexed successfully",
@@ -50,7 +63,12 @@ export async function POST(request) {
       }
 
       const result = await indexMultipleWebsites(urls, userId);
-
+      console.log("[upload:website] batch indexed", {
+        requested: urls.length,
+        indexed: result.indexed,
+        failed: result.failed,
+        ms: Date.now() - start,
+      });
       return NextResponse.json({
         success: true,
         message: `Indexed ${result.indexed} of ${urls.length} websites`,
@@ -69,11 +87,12 @@ export async function POST(request) {
       { status: 400 }
     );
   } catch (error) {
-    console.error("Website indexing error:", error);
+    console.error("[upload:website] error:", error?.message || error);
     return NextResponse.json(
       {
         error: "Failed to index website",
-        details: error.message,
+        details: error?.message || "",
+        hint: "Check /api/debug/auth for cookie/session state",
       },
       { status: 500 }
     );
