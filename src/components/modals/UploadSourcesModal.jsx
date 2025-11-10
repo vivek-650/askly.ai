@@ -6,44 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { ArrowLeft, Upload, Link2, Globe, Youtube, FileText, Copy, ClipboardCopy } from "lucide-react"
 
-const uploadOptions = [
-  {
-    id: "file",
-    icon: Upload,
-    label: "Upload Files",
-    description: "PDF, TXT, DOC"
-  },
-  {
-    id: "link",
-    icon: Link2,
-    label: "Link",
-    description: "Any URL"
-  },
-  {
-    id: "website",
-    icon: Globe,
-    label: "Website",
-    description: "Web pages"
-  },
-  {
-    id: "youtube",
-    icon: Youtube,
-    label: "YouTube",
-    description: "Video transcript"
-  },
-  {
-    id: "paste-text",
-    icon: FileText,
-    label: "Paste text",
-    description: "Add text directly"
-  },
-  {
-    id: "copied-text",
-    icon: ClipboardCopy,
-    label: "Copied text",
-    description: "From clipboard"
-  }
-]
 
 
 export function UploadSourcesModal({ open, onOpenChange, onSelectOption, onFileUpload }) {
@@ -154,42 +116,17 @@ export function UploadSourcesModal({ open, onOpenChange, onSelectOption, onFileU
                   {isUploading ? "Uploading..." : "Drag and drop files here, or click to browse"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Supports PDF, TXT, DOC, DOCX (Max 50MB)
+                  Supports PDF, TXT, DOC, DOCX (Max 10MB)
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Upload Options Grid */}
-          <div>
-            <p className="text-sm font-medium mb-3">Or choose an option:</p>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {uploadOptions.map((option) => {
-                const Icon = option.icon
-                return (
-                  <Card
-                    key={option.id}
-                    className="p-4 hover:bg-accent cursor-pointer transition-colors border-2 hover:border-primary"
-                    onClick={() => handleOptionClick(option.id)}
-                  >
-                    <div className="flex flex-col items-center text-center gap-2">
-                      <Icon className="h-6 w-6 text-primary" />
-                      <div>
-                        <p className="text-sm font-medium">{option.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {option.description}
-                        </p>
-                      </div>
-                    </div>
-                  </Card>
-                )
-              })}
-            </div>
-          </div>
+        
 
           <div className="text-xs text-muted-foreground">
-            <p>• Maximum 50 sources per notebook</p>
-            <p>• Each file must be under 50MB</p>
+            {/* <p>• Maximum 50 sources per notebook</p> */}
+            <p>• Each file must be under 10MB</p>
           </div>
         </div>
       </DialogContent>

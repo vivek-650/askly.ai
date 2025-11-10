@@ -33,12 +33,12 @@ export async function POST(request) {
       );
     }
 
-    // Validate file size (50MB max)
-    const maxSize = 50 * 1024 * 1024;
+    // Validate file size (10MB max)
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       console.warn("[upload:file] File too large", { size: file.size });
       return NextResponse.json(
-        { error: "File size exceeds 50MB limit" },
+        { error: "File size exceeds 10MB limit" },
         { status: 400 }
       );
     }
