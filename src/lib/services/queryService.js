@@ -227,6 +227,23 @@ export async function initializeSharedCollection() {
       });
 
       console.log(`✅ Created shared collection: ${SHARED_COLLECTION_NAME}`);
+    } else {
+      // Verify vector size matches the embedding model
+      try {
+        const info = await client.getCollection(SHARED_COLLECTION_NAME);
+        const size = info?.result?.config?.params?.vectors?.size;
+        if (size && size !== 3072) {
+          console.warn(
+            `⚠️ Qdrant collection '${SHARED_COLLECTION_NAME}' vector size is ${size}, expected 3072 for text-embedding-3-large. Consider recreating the collection to avoid errors.`
+          );
+        }
+      } catch (e) {
+        // Non-fatal if unable to fetch details
+        console.warn(
+          `⚠️ Unable to verify collection vector size for '${SHARED_COLLECTION_NAME}':`,
+          e?.message || e
+        );
+      }
     }
 
     return { success: true, collectionName: SHARED_COLLECTION_NAME };

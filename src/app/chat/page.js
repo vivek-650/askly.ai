@@ -27,6 +27,7 @@ import {
   useDocuments,
   useUploadPDF,
   useUploadWebsite,
+  useUploadYouTube,
   useDeleteDocument,
   useChatMessage,
 } from "@/hooks/useDocuments";
@@ -81,6 +82,7 @@ export default function ChatPage() {
   });
   const uploadPDFMutation = useUploadPDF();
   const uploadWebsiteMutation = useUploadWebsite();
+  const uploadYouTubeMutation = useUploadYouTube();
   const deleteDocumentMutation = useDeleteDocument();
   const chatMutation = useChatMessage();
 
@@ -161,6 +163,47 @@ export default function ChatPage() {
           )
         );
       }
+    }
+  };
+
+  // Handle YouTube video upload with React Query
+  const handleYouTubeUpload = async (url) => {
+    if (!isSignedIn) {
+      console.warn("YouTube upload blocked: user not signed in");
+      return;
+    }
+
+    const uploadId = Date.now().toString() + Math.random();
+
+    // Extract video ID for display
+    const videoIdMatch = url.match(
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/
+    );
+    const videoId = videoIdMatch ? videoIdMatch[1] : "video";
+
+    setUploadingDocs((prev) => [
+      ...prev,
+      {
+        id: uploadId,
+        name: `YouTube: ${videoId}`,
+        type: "youtube",
+        status: "uploading",
+        progress: 0,
+      },
+    ]);
+
+    try {
+      await uploadYouTubeMutation.mutateAsync(url);
+      setUploadingDocs((prev) => prev.filter((doc) => doc.id !== uploadId));
+    } catch (error) {
+      console.error("YouTube indexing error:", error);
+      setUploadingDocs((prev) =>
+        prev.map((doc) =>
+          doc.id === uploadId ? { ...doc, status: "error" } : doc
+        )
+      );
+      // Re-throw error to show in modal
+      throw error;
     }
   };
 
@@ -574,6 +617,7 @@ export default function ChatPage() {
       <YouTubeURLModal
         open={isYouTubeModalOpen}
         onOpenChange={setIsYouTubeModalOpen}
+        onYouTubeUpload={handleYouTubeUpload}
       />
     </SidebarProvider>
   );

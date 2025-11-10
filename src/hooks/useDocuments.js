@@ -206,6 +206,64 @@ export function useUploadText() {
 }
 
 /**
+ * Upload YouTube video mutation
+ */
+export function useUploadYouTube() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (url) => {
+      const response = await fetch("/api/upload/youtube", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(
+          error.details || error.error || "YouTube indexing failed"
+        );
+      }
+
+      return response.json();
+    },
+    onSuccess: (data) => {
+      console.log("YouTube upload success:", data);
+
+      // Optimistically update cache
+      queryClient.setQueryData(documentKeys.list(), (old = []) => {
+        const newDoc = {
+          id: data.data.documentId,
+          documentId: data.data.documentId,
+          name: data.data.videoTitle || `YouTube Video ${data.data.videoId}`,
+          type: "youtube",
+          date: new Date(data.data.indexedAt).toLocaleDateString(),
+          uploadedAt: data.data.indexedAt,
+          url: data.data.url,
+          chunks: data.data.chunks,
+          videoId: data.data.videoId,
+        };
+        const filtered = old.filter((d) => d.documentId !== newDoc.documentId);
+        const updated = [...filtered, newDoc];
+        console.log("Updated documents with YouTube video:", updated);
+        return updated;
+      });
+
+      // Delay refetch to let indexing commit
+      setTimeout(() => {
+        queryClient.refetchQueries({
+          queryKey: documentKeys.list(),
+          type: "active",
+        });
+      }, 1500);
+      console.log("Scheduled documents refetch after YouTube indexing...");
+    },
+  });
+}
+
+/**
  * Delete document mutation
  */
 export function useDeleteDocument() {

@@ -11,7 +11,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.34.5",
     "@langchain/community": "^1.0.0",
-    "@langchain/core": "^1.0.0",
+    "@langchain/core": "^1.0.3",
     "@langchain/openai": "^1.0.0",
     "@langchain/qdrant": "^1.0.0",
     "@langchain/textsplitters": "^1.0.0",
@@ -39,7 +39,9 @@
     "pdf-parse-fork": "^1.2.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "youtube-transcript": "^1.2.1",
+    "youtubei.js": "^16.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

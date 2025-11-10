@@ -3,28 +3,64 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Youtube } from "lucide-react"
+import { ArrowLeft, Youtube, Loader2 } from "lucide-react"
 
-export function YouTubeURLModal({ open, onOpenChange }) {
+export function YouTubeURLModal({ open, onOpenChange, onYouTubeUpload }) {
   const [url, setUrl] = useState("")
+  const [isUploading, setIsUploading] = useState(false)
+  const [error, setError] = useState("")
 
-  const handleInsert = () => {
-    // Handle YouTube URL insertion logic
-    console.log("Inserting YouTube URL:", url)
-    onOpenChange(false)
-    setUrl("")
+  const handleInsert = async () => {
+    if (!url.trim()) {
+      setError("Please enter a YouTube URL")
+      return
+    }
+
+    // Validate YouTube URL format
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+    if (!youtubeRegex.test(url)) {
+      setError("Please enter a valid YouTube URL")
+      return
+    }
+
+    setError("")
+    setIsUploading(true)
+
+    try {
+      if (onYouTubeUpload) {
+        await onYouTubeUpload(url)
+      }
+      
+      // Close modal and reset
+      onOpenChange(false)
+      setUrl("")
+    } catch (err) {
+      console.error("YouTube upload error:", err)
+      setError(err.message || "Failed to index YouTube video")
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleClose = () => {
+    if (!isUploading) {
+      onOpenChange(false)
+      setUrl("")
+      setError("")
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px] bg-background">
         <DialogHeader>
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
               className="h-8 w-8"
+              disabled={isUploading}
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -41,33 +77,50 @@ export function YouTubeURLModal({ open, onOpenChange }) {
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://www.youtube.com/watch?v=..."
-            className="w-full p-4 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+          <div>
+            <input
+              type="text"
+              value={url}
+              onChange={(e) => {
+                setUrl(e.target.value)
+                setError("")
+              }}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="w-full p-4 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              disabled={isUploading}
+            />
+            {error && (
+              <p className="text-xs text-destructive mt-2">{error}</p>
+            )}
+          </div>
           
           <div className="text-xs text-muted-foreground space-y-1">
             <p>• Only public YouTube videos are supported</p>
-            <p>• The transcript will be imported as a source</p>
-            <p>• Video must have captions available</p>
+            <p>• The transcript will be imported with timestamps</p>
+            <p>• Video must have captions/subtitles available</p>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={handleClose}
+              disabled={isUploading}
             >
               Cancel
             </Button>
             <Button
               onClick={handleInsert}
-              disabled={!url.trim()}
+              disabled={!url.trim() || isUploading}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              Insert
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Indexing...
+                </>
+              ) : (
+                "Insert"
+              )}
             </Button>
           </div>
         </div>
