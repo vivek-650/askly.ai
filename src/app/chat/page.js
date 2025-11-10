@@ -346,7 +346,7 @@ export default function ChatPage() {
                         const n = doc.name || "Untitled";
                         // Prefer concise display for extremely long titles (> 80 chars)
                         if (!isYouTube) return n;
-                        return n.length > 80 ? n.slice(0, 77) + "…" : n;
+                        return n.length > 20 ? n.slice(0, 17) + "…" : n;
                       })();
                       return (
                         <SidebarMenuItem key={doc.id}>
@@ -471,7 +471,9 @@ export default function ChatPage() {
                   className="text-lg font-semibold truncate"
                   title={selectedDocument?.name}
                 >
-                  {selectedDocument?.name || "Chat with your documents"}
+                  {selectedDocument?.name?.length > 20
+                    ? selectedDocument.name.slice(0, 22) + "..."
+                    : selectedDocument?.name}
                 </h1>
                 {selectedDocument && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
