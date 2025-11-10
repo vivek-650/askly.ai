@@ -340,37 +340,67 @@ export default function ChatPage() {
                     ))}
 
                     {/* Successfully uploaded documents */}
-                    {documents.map((doc) => (
-                      <SidebarMenuItem key={doc.id}>
-                        <div className="flex items-center gap-1 w-full">
-                          <SidebarMenuButton
-                            onClick={() => setSelectedDocument(doc)}
-                            isActive={selectedDocument?.id === doc.id}
-                            className="flex-1"
-                          >
-                            {doc.type === "pdf" ? (
-                              <FileText className="h-4 w-4" />
-                            ) : (
-                              <Globe className="h-4 w-4" />
-                            )}
-                            <div className="flex-1 overflow-hidden">
-                              <p className="truncate text-sm">{doc.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {doc.date}
-                              </p>
-                            </div>
-                          </SidebarMenuButton>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0"
-                            onClick={() => handleDeleteDocument(doc.documentId)}
-                          >
-                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                          </Button>
-                        </div>
-                      </SidebarMenuItem>
-                    ))}
+                    {documents.map((doc) => {
+                      const isYouTube = doc.type === "youtube";
+                      const displayName = (() => {
+                        const n = doc.name || "Untitled";
+                        // Prefer concise display for extremely long titles (> 80 chars)
+                        if (!isYouTube) return n;
+                        return n.length > 80 ? n.slice(0, 77) + "…" : n;
+                      })();
+                      return (
+                        <SidebarMenuItem key={doc.id}>
+                          <div className="flex items-center gap-1 w-full">
+                            <SidebarMenuButton
+                              onClick={() => setSelectedDocument(doc)}
+                              isActive={selectedDocument?.id === doc.id}
+                              className="flex-1"
+                            >
+                              {doc.type === "pdf" ? (
+                                <FileText className="h-4 w-4" />
+                              ) : doc.type === "website" ? (
+                                <Globe className="h-4 w-4" />
+                              ) : (
+                                <Youtube className="h-4 w-4" />
+                              )}
+                              <div className="flex-1 overflow-hidden">
+                                {/* Wrap long YouTube titles with tooltip */}
+                                {isYouTube &&
+                                doc.name &&
+                                doc.name.length > 80 ? (
+                                  <div className="text-sm">
+                                    <span
+                                      className="truncate block"
+                                      title={doc.name}
+                                      data-full-title={doc.name}
+                                    >
+                                      {displayName}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <p className="truncate text-sm">
+                                    {displayName}
+                                  </p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  {doc.date}
+                                </p>
+                              </div>
+                            </SidebarMenuButton>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0"
+                              onClick={() =>
+                                handleDeleteDocument(doc.documentId)
+                              }
+                            >
+                              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                          </div>
+                        </SidebarMenuItem>
+                      );
+                    })}
                   </SidebarMenu>
                 </ScrollArea>
               </SidebarGroupContent>
@@ -436,14 +466,21 @@ export default function ChatPage() {
             <div className="flex items-center gap-2">
               <SidebarTrigger />
               <Separator orientation="vertical" className="h-6" />
-              <div>
-                <h1 className="text-lg font-semibold">
+              <div className="min-w-0">
+                <h1
+                  className="text-lg font-semibold truncate"
+                  title={selectedDocument?.name}
+                >
                   {selectedDocument?.name || "Chat with your documents"}
                 </h1>
                 {selectedDocument && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Badge variant="secondary" className="text-xs">
-                      {selectedDocument.type === "pdf" ? "PDF" : "Website"}
+                      {selectedDocument.type === "pdf"
+                        ? "PDF"
+                        : selectedDocument.type === "website"
+                        ? "Website"
+                        : "YouTube"}
                     </Badge>
                   </div>
                 )}
@@ -577,7 +614,9 @@ export default function ChatPage() {
                   onChange={(e) => setInputMessage(e.target.value)}
                   placeholder={
                     selectedDocument
-                      ? `Ask about ${selectedDocument.name}...`
+                      ? `Ask about ${(
+                          selectedDocument.name || "this document"
+                        ).slice(0, 80)}...`
                       : "Ask a question..."
                   }
                   disabled={chatMutation.isPending}
