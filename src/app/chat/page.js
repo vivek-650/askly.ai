@@ -387,9 +387,9 @@ export default function ChatPage() {
         </Sidebar>
 
         {/* Main Chat Area */}
-        <div className="flex flex-1 flex-col border rounded-3xl dark:bg-black/60">
+        <div className="flex flex-1 flex-col border rounded-3xl dark:bg-black/60 overflow-hidden">
           {/* Header */}
-          <header className="flex h-14 items-center justify-between border-b px-4">
+          <header className="flex h-14 items-center justify-between border-b px-4 shrink-0">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
               <Separator orientation="vertical" className="h-6" />
@@ -436,7 +436,7 @@ export default function ChatPage() {
           </header>
 
           {/* Messages Area */}
-          <ScrollArea className="flex-1 p-4 ">
+          <div className="flex-1 overflow-y-auto p-4 thin-scrollbar">
             <div className="mx-auto max-w-3xl space-y-4">
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center space-y-4 py-20 text-center">
@@ -523,10 +523,10 @@ export default function ChatPage() {
               )}
               <div ref={messagesEndRef} />
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Input Area */}
-          <div className="border-t p-4">
+          <div className="border-t p-4 shrink-0">
             <form onSubmit={handleSendMessage} className="mx-auto max-w-3xl">
               <div className="flex gap-2">
                 <Input
