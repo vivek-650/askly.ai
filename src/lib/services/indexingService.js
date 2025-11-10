@@ -1,5 +1,5 @@
 import fs from "fs";
-import pdf from "pdf-parse";
+import pdf from "pdf-parse-fork";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { OpenAIEmbeddings } from "@langchain/openai";
 import { QdrantVectorStore } from "@langchain/qdrant";
@@ -15,9 +15,19 @@ const SHARED_COLLECTION_NAME = "askly-documents";
  */
 export async function indexPDFDocument(filePath, fileName, userId) {
   try {
+    console.log("[indexing:pdf] start", { filePath, fileName, userId });
+
+    // Verify file exists
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found: ${filePath}`);
+    }
+
     // 1. Read PDF file
     const dataBuffer = fs.readFileSync(filePath);
+    console.log("[indexing:pdf] file read", { bufferSize: dataBuffer.length });
+
     const data = await pdf(dataBuffer);
+    console.log("[indexing:pdf] pdf parsed", { textLength: data.text?.length });
 
     const rawText = data.text;
 
@@ -81,4 +91,3 @@ export async function indexPDFDocument(filePath, fileName, userId) {
     throw error;
   }
 }
-
