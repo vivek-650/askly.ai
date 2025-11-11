@@ -58,6 +58,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { WebsiteURLModal } from "@/components/modals/WebsiteURLModal";
 import { YouTubeURLModal } from "@/components/modals/YouTubeURLModal";
 import { UploadSourcesModal } from "@/components/modals/UploadSourcesModal";
+import { MarkdownMessage } from "@/components/MarkdownMessage";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -567,9 +568,16 @@ export default function ChatPage() {
                           : "bg-muted"
                       }`}
                     >
-                      <p className="text-sm leading-relaxed">
-                        {message.content}
-                      </p>
+                      {message.role === "assistant" ? (
+                        <MarkdownMessage
+                          content={message.content}
+                          className="text-sm"
+                        />
+                      ) : (
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                          {message.content}
+                        </p>
+                      )}
                       {message.sources && (
                         <div className="mt-2 border-t pt-2 text-xs opacity-70">
                           <p className="font-medium">Sources:</p>
